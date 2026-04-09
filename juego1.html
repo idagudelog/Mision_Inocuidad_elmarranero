@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Inspector Sanitario – Carne Segura</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#0d0d0d;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+#wrap{width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;line-height:0;flex-shrink:0}
+canvas{display:block;border:3px solid #c0392b;box-shadow:0 0 40px rgba(192,57,43,0.7);touch-action:none}
+/* ── PORTRAIT MÓVIL ── */
+#portrait-hint{display:none;text-align:center;padding:14px 20px;color:rgba(255,255,255,0.4);font-family:'Nunito',sans-serif;font-size:12px;line-height:1.8;max-width:340px}
+#portrait-hint b{color:rgba(255,255,255,0.7)}
+@media(orientation:portrait){
+  html,body{justify-content:flex-start;padding-top:12px}
+  #portrait-hint{display:block}
+}
+/* ── INTRO OVERLAY ── */
+#game-intro{position:fixed;inset:0;z-index:999;background:rgba(6,9,14,0.97);font-family:'Nunito',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;padding:16px 20px;overflow-y:auto}
+#game-intro.hide{display:none}
+.po-icon{font-size:68px;line-height:1}
+.po-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,7vw,44px);letter-spacing:clamp(0px,0.8vw,4px);text-align:center;color:#fff}
+.po-sub{font-family:'Bebas Neue',sans-serif;font-size:20px;color:#f39c12;text-align:center}
+.po-rules{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px 22px;max-width:480px;width:100%}
+.po-rules li{font-size:13px;color:#bdc3c7;margin-bottom:6px;line-height:1.5;list-style:none;padding-left:4px}
+.po-btn{padding:11px 38px;border-radius:12px;border:none;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;color:#fff;transition:opacity 0.2s,transform 0.1s;margin-top:4px}
+.po-btn:hover{opacity:0.85;transform:scale(1.04)}
+@media(max-height:500px){
+  #game-intro{gap:7px;padding:10px 14px}
+  .po-icon{font-size:32px}
+  .po-title{font-size:22px;letter-spacing:1px}
+  .po-sub{font-size:13px}
+  .po-rules{padding:7px 12px;max-width:100%}
+  .po-rules li{font-size:10px;margin-bottom:2px;line-height:1.3}
+  .po-btn{padding:7px 24px;font-size:17px;margin-top:0}
+}
+/* ── QUESTION HTML OVERLAY ── */
+#q-ov{display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;padding:20px;box-sizing:border-box;touch-action:auto}
+#q-ov.show{display:flex}
+#q-panel{border-radius:14px;width:88%;max-width:300px;max-height:90vh;overflow-y:auto;overflow-x:hidden;border:2.5px solid #888;box-sizing:border-box;-webkit-overflow-scrolling:touch}
+#q-head{padding:12px 16px;background:rgba(0,0,0,0.5)}
+#q-hname{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;color:#fff;text-align:center;word-break:break-word}
+#q-body{background:rgba(4,14,8,0.98);padding:10px 14px 14px}
+#q-ask{font-size:14px;color:#95a5a6;text-align:center;margin-bottom:4px}
+#q-hnt{font-size:11px;color:#4a6a5a;text-align:center;margin-bottom:10px}
+#q-btns{display:flex;flex-direction:column;gap:8px}
+.qb{padding:14px;border-radius:10px;border:2px solid;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:1px;color:#fff;background:rgba(255,255,255,0.05);width:100%;text-align:left;-webkit-tap-highlight-color:transparent}
+.qb:active{opacity:0.75}
+#q-res{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;text-align:center;padding:10px 0 4px;display:none}
+#q-info{font-size:13px;color:#dde9e0;text-align:center;line-height:1.5;padding-bottom:4px;display:none;word-break:break-word}
+#q-cls{font-size:11px;color:#4a6a5a;text-align:center;padding-bottom:6px;display:none}
+</style>
+</head>
+<body>
+<!-- INTRO OVERLAY -->
+<div id="game-intro">
+  <div class="po-icon">&#x1F50D;</div>
+  <div class="po-title" style="color:#e74c3c">INSPECTOR SANITARIO 2D</div>
+  <div class="po-sub">&#x1F9AA; Carne Segura</div>
+  <ul class="po-rules">
+    <li>&#x1F6B6; El inspector se mueve entre estaciones — usa las flechas &#x2191;&#x2193; o desliza la pantalla</li>
+    <li>&#x1F50D; Al llegar a una estacion, presiona ESPACIO o toca la pantalla para inspeccionar</li>
+    <li>&#x1F9EA; Clasifica cada peligro: <b style="color:#e74c3c">Biologico</b>, <b style="color:#3498db">Fisico</b> o <b style="color:#f39c12">Quimico</b></li>
+    <li>&#x2705; Clasificacion correcta: <b>puntos positivos</b></li>
+    <li>&#x274C; Clasificacion incorrecta: <b>penalizacion de puntos</b></li>
+    <li>&#x23F1;&#xFE0F; 90 segundos para identificar los <b>12 peligros</b></li>
+  </ul>
+  <button class="po-btn" style="background:linear-gradient(135deg,#c0392b,#e74c3c);box-shadow:0 0 24px rgba(192,57,43,0.5)" onclick="launchGame()">&#x25B6;&nbsp; COMENZAR</button>
+</div>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="portrait-hint">
+    <b>↑ ↓</b> Mover inspector &nbsp;|&nbsp; <b>ESPACIO</b> Inspeccionar<br>
+    <b>Desliza</b> arriba/abajo para mover &nbsp;|&nbsp; <b>Toca</b> la pantalla para inspeccionar<br>
+    <span style="font-size:11px;color:rgba(255,255,255,0.25)">Rota el celular para una mejor experiencia</span>
+  </div>
+</div>
+<!-- QUESTION HTML OVERLAY -->
+<div id="q-ov">
+  <div id="q-panel">
+    <div id="q-head"><div id="q-hname"></div></div>
+    <div id="q-body">
+      <div id="q-ask">&#xBF;A qu&#xE9; categor&#xED;a de peligro pertenece?</div>
+      <div id="q-hnt">Toca un bot&#xF3;n o pulsa 1 &middot; 2 &middot; 3</div>
+      <div id="q-btns">
+        <button class="qb" id="qb1" onclick="answerQ('biologico')">1 &nbsp; BIOL&#xD3;GICO</button>
+        <button class="qb" id="qb2" onclick="answerQ('fisico')">2 &nbsp; F&#xCD;SICO</button>
+        <button class="qb" id="qb3" onclick="answerQ('quimico')">3 &nbsp; QU&#xCD;MICO</button>
+      </div>
+      <div id="q-res"></div>
+      <div id="q-info"></div>
+      <div id="q-cls">Cerrando autom&#xE1;ticamente...</div>
+    </div>
+  </div>
+</div>
+<script>
+// ================================================================
+//  INSPECTOR SANITARIO – Pure Canvas Game (sin dependencias)
+// ================================================================
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const W = 800, H = 500;
+
+// DPR fix: canvas físico más grande para texto nítido,
+// pero TODAS las coordenadas de juego siguen siendo 800x500.
+const DPR = window.devicePixelRatio || 1;
+canvas.width  = W * DPR;
+canvas.height = H * DPR;
+ctx.scale(DPR, DPR); // todo lo dibujado usa coords 800x500
+
+// Conversión clic → coordenadas 800x500
+function toCanvasCoords(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - r.left) * (W / r.width),
+    y: (clientY - r.top)  * (H / r.height)
+  };
+}
+
+// ----------------------------------------------------------------
+// DATOS DE PELIGROS
+// ----------------------------------------------------------------
+const CATS = {
+  biologico: {
+    label:'Biológico', color:'#27ae60', dark:'#1a6b3c', light:'#d5f5e3',
+    items:[
+      {id:'sal', name:'Salmonella',              desc:'Bacteria patógena. Se destruye con cocción mayor a 70°C. Causa gastroenteritis severa.'},
+      {id:'eco', name:'Escherichia coli',        desc:'Bacteria fecal. Contamina por falta de higiene de manos y superficies de trabajo.'},
+      {id:'lis', name:'Listeria monocytogenes',  desc:'Crece en refrigeración. Muy peligrosa en embarazadas y personas inmunosuprimidas.'},
+      {id:'yer', name:'Yersinia enterocolitica', desc:'Muy asociada al cerdo. Puede multiplicarse en frío. Control: higiene y temperatura.'},
+      {id:'cam', name:'Campylobacter',           desc:'Principal causa de diarrea bacteriana por carnes mal manipuladas en el mundo.'},
+      {id:'tri', name:'Trichinella spiralis',    desc:'Parásito que causa triquinelosis. Se elimina con congelación prolongada o cocción completa.'},
+      {id:'tox', name:'Toxoplasma gondii',       desc:'Parásito peligroso en el embarazo. Control: cocción completa, no consumir cruda.'}
+    ]
+  },
+  fisico: {
+    label:'Físico', color:'#e67e22', dark:'#9a5010', light:'#fdebd0',
+    items:[
+      {id:'hue', name:'Fragmento de hueso',      desc:'Muy común en carne de cerdo. Puede fracturar dientes. Requiere revisión manual rigurosa.'},
+      {id:'met', name:'Fragmento metálico',      desc:'Proviene de cuchillos o sierras desgastadas. Detectable con equipos de detección de metales.'},
+      {id:'pla', name:'Fragmento de plástico',   desc:'De empaques o guantes rotos. Difícil de detectar. Control: inspección visual estricta.'},
+      {id:'vid', name:'Fragmento de vidrio',     desc:'De luminarias o vitrinas rotas. Muy peligroso. Proteger todas las fuentes de vidrio.'},
+      {id:'cab', name:'Cabello / uña personal',  desc:'Objetos personales. Control: cofia obligatoria, uñas cortas, prohibir accesorios.'},
+      {id:'equ', name:'Pieza de equipo dañado',  desc:'Partes de maquinaria deteriorada. Mantenimiento preventivo antes de iniciar labores.'},
+      {id:'suc', name:'Suciedad / tierra',       desc:'Contaminación ambiental. Control: POES – Procedimientos de Saneamiento Estandarizados.'}
+    ]
+  },
+  quimico: {
+    label:'Químico', color:'#8e44ad', dark:'#5b2c6f', light:'#e8daef',
+    items:[
+      {id:'clo', name:'Residuos de cloro',        desc:'Agente de limpieza común. Enjuague insuficiente deja residuos tóxicos en el producto.'},
+      {id:'amo', name:'Amonio cuaternario',       desc:'Sanitizante ampliamente usado. Tóxico si permanece en superficies de contacto con alimentos.'},
+      {id:'det', name:'Detergente residual',      desc:'Enjuague incompleto deja residuos. Verificar ausencia total antes de iniciar la producción.'},
+      {id:'lub', name:'Lubricante de maquinaria', desc:'Aceites industriales no aptos para alimentos. Usar solo lubricantes grado alimentario NSF H1.'},
+      {id:'ant', name:'Residuo de antibiótico',   desc:'Residuo veterinario del animal. Genera resistencia antimicrobiana. Respetar el período de retiro.'},
+      {id:'par', name:'Antiparasitario residual', desc:'Residuo veterinario tóxico en altas concentraciones. Monitoreo obligatorio en matadero.'},
+      {id:'mig', name:'Migración desde plástico', desc:'Plásticos no certificados liberan compuestos tóxicos. Usar solo materiales aptos para alimentos.'}
+    ]
+  }
+};
+
+const ALL_HAZARDS = [];
+Object.keys(CATS).forEach(type => {
+  CATS[type].items.forEach(item => {
+    ALL_HAZARDS.push({...item, type, catLabel:CATS[type].label,
+      color:CATS[type].color, dark:CATS[type].dark, light:CATS[type].light});
+  });
+});
+
+// ----------------------------------------------------------------
+// ESTADO DEL JUEGO
+// ----------------------------------------------------------------
+let STATE = 'menu'; // splash | gameSelect | menu | game | question | result
+let player, hazards, score, timeLeft, identified, timerInterval;
+let currentQ    = null;
+let feedback    = null;
+let keys        = {};
+let lastTime    = 0;
+let splashStart = Date.now(); // para auto-pasar de splash a gameSelect
+
+// splash desactivado en modo iframe
+
+// ----------------------------------------------------------------
+// INPUT
+// ----------------------------------------------------------------
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+
+  // Selección con 1, 2, 3 durante pregunta
+  if(STATE === 'question') {
+    if(e.key==='1') answerQ('biologico');
+    if(e.key==='2') answerQ('fisico');
+    if(e.key==='3') answerQ('quimico');
+  }
+
+  // ESPACIO o ENTER
+  if(e.key === ' ' || e.key === 'Enter') {
+    if(STATE === 'menu')       { startGame(); }
+    if(STATE === 'result')     { startGame(); }
+    if(STATE === 'game')       { tryInspect(); }
+  }
+  e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+
+// ----------------------------------------------------------------
+// MOUSE / TOUCH
+// ----------------------------------------------------------------
+canvas.addEventListener('click', e => {
+  const {x: mx, y: my} = toCanvasCoords(e.clientX, e.clientY);
+  handleClick(mx, my);
+});
+
+function handleClick(mx, my) {
+
+  if(STATE === 'menu')   {
+    if(inRect(mx,my,300,400,200,50)) startGame();
+    if(inRect(mx,my,10,460,120,28)) { if(window.parent && window.parent.exitGame) window.parent.exitGame(); else STATE='menu'; }
+    return;
+  }
+  if(STATE === 'result') {
+    if(inRect(mx,my,160,435,200,42)) startGame();
+    if(inRect(mx,my,440,435,200,42)) { if(window.parent && window.parent.exitGame) window.parent.exitGame(); else STATE='menu'; }
+    return;
+  }
+  if(STATE === 'question') { return; }
+  if(STATE === 'game') {
+    if(currentStation !== null) {
+      const h = hazards[currentStation];
+      if(h && !h.identified && !h.failed) {
+        if(inRect(mx, my, h.x - 44, h.y - 44, 88, 88)) {
+          triggerQuestion(h);
+          return;
+        }
+      }
+    }
+  }
+}
+
+function inRect(mx,my,x,y,w,h){ return mx>=x && mx<=x+w && my>=y && my<=y+h; }
+
+// ----------------------------------------------------------------
+// 12 ESTACIONES FIJAS — diseñadas a mano, sin superposiciones
+// El jugador empieza en x=400, y=210 → ninguna estación cerca
+// ----------------------------------------------------------------
+const STATIONS = [
+  { x:  80, y: 135 },  // 1  esquina sup-izq
+  { x: 200, y: 135 },  // 2
+  { x: 320, y: 135 },  // 3
+  { x: 520, y: 135 },  // 4
+  { x: 640, y: 135 },  // 5
+  { x: 740, y: 135 },  // 6  esquina sup-der
+  { x:  80, y: 225 },  // 7  fila inferior-izq
+  { x: 200, y: 225 },  // 8
+  { x: 320, y: 225 },  // 9
+  { x: 520, y: 225 },  // 10
+  { x: 640, y: 225 },  // 11
+  { x: 740, y: 225 },  // 12 fila inferior-der
+];
+
+let currentStation = 0; // índice de la estación activa en el recorrido
+
+function startGame() {
+  if(timerInterval) clearInterval(timerInterval);
+  score      = 0;
+  timeLeft   = 90;
+  identified = [];
+  currentQ   = null;
+  feedback   = null;
+  keys       = {};
+  currentStation = 0;
+
+  player       = { x: STATIONS[0].x, y: 210, w:28, h:48, speed:200, dir:1 };
+  lastQuitPos  = null;
+  nearbyHazard = null;
+
+  const pool = shuffle([...ALL_HAZARDS]).slice(0, 12);
+  hazards = pool.map((h, i) => ({
+    ...h,
+    x:          STATIONS[i].x,
+    y:          STATIONS[i].y,
+    visualY:    STATIONS[i].y,
+    bobOffset:  Math.random() * Math.PI * 2,
+    identified: false,
+    failed:     false
+  }));
+
+  STATE = 'game';
+  timerInterval = setInterval(() => {
+    if(STATE !== 'game') return;
+    timeLeft--;
+    if(timeLeft <= 0) { timeLeft = 0; endGame(); }
+  }, 1000);
+
+  requestAnimationFrame(loop);
+}
+
+// ----------------------------------------------------------------
+// PREGUNTA
+// ----------------------------------------------------------------
+function showQOverlay(haz) {
+  const panel = document.getElementById('q-panel');
+  panel.style.borderColor = haz.color;
+  document.getElementById('q-head').style.background = haz.color+'40';
+  document.getElementById('q-hname').textContent = haz.name;
+  const bData=[{id:'qb1',col:'#27ae60'},{id:'qb2',col:'#e67e22'},{id:'qb3',col:'#8e44ad'}];
+  bData.forEach(b=>{ const el=document.getElementById(b.id); el.style.borderColor=b.col; el.disabled=false; el.style.opacity='1'; });
+  document.getElementById('q-ask').style.display='block';
+  document.getElementById('q-hnt').style.display='block';
+  document.getElementById('q-btns').style.display='flex';
+  document.getElementById('q-res').style.display='none';
+  document.getElementById('q-info').style.display='none';
+  document.getElementById('q-cls').style.display='none';
+  document.getElementById('q-ov').classList.add('show');
+}
+function updateQOverlay(ok, haz) {
+  document.getElementById('q-ask').style.display='none';
+  document.getElementById('q-hnt').style.display='none';
+  document.getElementById('q-btns').style.display='none';
+  const resEl=document.getElementById('q-res');
+  resEl.style.display='block';
+  resEl.style.color=ok?'#2ecc71':'#e74c3c';
+  resEl.textContent=ok?'\u2713  \u00A1CORRECTO!  +100 puntos':'\u2717  INCORRECTO  \u221210 segundos';
+  const infoEl=document.getElementById('q-info');
+  infoEl.style.display='block';
+  infoEl.textContent=ok?haz.desc:'Respuesta correcta: '+CATS[haz.type].label.toUpperCase();
+  document.getElementById('q-cls').style.display='block';
+}
+function hideQOverlay() { document.getElementById('q-ov').classList.remove('show'); }
+
+function triggerQuestion(haz) {
+  if(STATE !== 'game') return;
+  nearbyHazard = null;
+  STATE    = 'question';
+  currentQ = { haz, answered: false };
+  showQOverlay(haz);
+}
+
+function answerQ(sel) {
+  if(!currentQ || currentQ.answered) return;
+  currentQ.answered     = true;
+  currentQ.selectedType = sel;
+  const ok = sel === currentQ.haz.type;
+
+  const hazRef = currentQ.haz;
+  if(ok) {
+    score += 100;
+    hazRef.identified = true;
+    hazRef.failed     = false;
+    identified.push(hazRef);
+  } else {
+    timeLeft = Math.max(0, timeLeft - 10);
+    hazRef.failed     = true;
+    hazRef.identified = true;
+  }
+  updateQOverlay(ok, hazRef);
+
+  setTimeout(() => {
+    hideQOverlay();
+    STATE        = 'game';
+    currentQ     = null;
+    feedback     = null;
+    nearbyHazard = null;
+    // Avanzar a la siguiente estación
+    currentStation++;
+    if(currentStation >= hazards.length) {
+      endGame();
+    } else if(ok && identified.length >= 12) {
+      endGame();
+    }
+  }, ok ? 2000 : 2800);
+}
+
+// Peligro más cercano al jugador (para mostrar indicador)
+let nearbyHazard = null;
+
+// Intentar inspeccionar — se llama al pulsar ESPACIO/ENTER o hacer clic en el ícono
+function tryInspect() {
+  if(STATE !== 'game') return;
+  if(currentStation >= hazards.length) return;
+  const h = hazards[currentStation];
+  if(!h || h.identified || h.failed) return;
+  if(nearbyHazard === h) triggerQuestion(h);
+}
+
+function shuffle(arr) {
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  return arr;
+}
+
+function endGame() {
+  if(timerInterval) clearInterval(timerInterval);
+  STATE = 'result';
+}
+
+// ----------------------------------------------------------------
+// GAME LOOP
+// ----------------------------------------------------------------
+function loop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  if(STATE === 'game') update(dt);
+  draw(ts);
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  if(currentStation >= hazards.length) return;
+  const target = hazards[currentStation];
+
+  // El jugador camina automáticamente hacia la estación activa en X
+  // El usuario puede moverlo en Y libremente (estética)
+  const tdx = target.x - player.x;
+
+  // Auto-movimiento hacia X de la estación
+  if(Math.abs(tdx) > 4) {
+    const autoVx = Math.sign(tdx) * player.speed * 0.6;
+    player.x += autoVx * dt;
+    player.dir = tdx > 0 ? 1 : -1;
+  } else {
+    player.x = target.x;
+  }
+
+  // Control manual en Y (solo arriba/abajo para animación)
+  let vy = 0;
+  if(keys['ArrowUp']   || keys['w'] || keys['W']) vy = -1;
+  if(keys['ArrowDown'] || keys['s'] || keys['S']) vy = +1;
+  player.y += vy * player.speed * dt;
+  player.y = Math.max(150, Math.min(255, player.y));
+
+  // El jugador está en la estación cuando X coincide
+  const arrived = Math.abs(player.x - target.x) < 6;
+  nearbyHazard = arrived ? target : null;
+}
+
+// ----------------------------------------------------------------
+// RENDER
+// ----------------------------------------------------------------
+function draw(ts) {
+  ctx.clearRect(0, 0, W, H);
+
+  if(STATE==='menu')       { drawMenu(); return; }
+  if(STATE==='result')     { drawResult(); return; }
+
+  drawGame(ts);
+  if(STATE==='question') drawQuestion();
+}
+
+// ==================== FONDO (Planta de chorizos) ====================
+function drawBG(ts) {
+  // === PISO: baldosas blancas industriales ===
+  ctx.fillStyle='#d8d0c4'; ctx.fillRect(0,0,W,H);
+  // juntas de baldosa
+  ctx.strokeStyle='rgba(180,170,160,0.7)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ ctx.beginPath();ctx.moveTo(x,78);ctx.lineTo(x,408);ctx.stroke(); }
+  for(let y=80;y<408;y+=40){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+  // manchas de humedad / desgaste
+  ctx.fillStyle='rgba(160,150,140,0.18)';
+  [[120,180,30,12],[350,220,20,8],[600,160,25,10],[80,250,18,7],[500,240,22,9]].forEach(([x,y,rx,ry])=>{
+    ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2); ctx.fill();
+  });
+
+  // === PARED SUPERIOR: azulejos blancos con franja azul ===
+  ctx.fillStyle='#e8e4de'; ctx.fillRect(0,0,W,78);
+  // franja azul industrial
+  ctx.fillStyle='#3a6b8a'; ctx.fillRect(0,55,W,10);
+  ctx.fillStyle='#2c5270'; ctx.fillRect(0,55,W,2);
+  ctx.fillStyle='#4a85aa'; ctx.fillRect(0,63,W,2);
+  // líneas de azulejo en pared
+  ctx.strokeStyle='rgba(200,196,190,0.8)'; ctx.lineWidth=0.8;
+  for(let x=0;x<W;x+=40){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,55);ctx.stroke(); }
+  ctx.beginPath();ctx.moveTo(0,27);ctx.lineTo(W,27);ctx.stroke();
+
+  // === EQUIPOS EN PARED (tuberías + extractor) ===
+  // Tuberías horizontales
+  ctx.fillStyle='#b0b8c0'; ctx.fillRect(0,10,W,8);
+  ctx.fillStyle='#8a9298'; ctx.fillRect(0,10,W,2);
+  ctx.fillStyle='#ccd4da'; ctx.fillRect(0,16,W,2);
+  // Codos y válvulas en tuberías
+  [[80,'#e74c3c'],[260,'#27ae60'],[480,'#e74c3c'],[680,'#27ae60']].forEach(([x,col])=>{
+    ctx.fillStyle='#8a9298'; ctx.beginPath(); ctx.arc(x,14,7,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=col; ctx.beginPath(); ctx.arc(x,14,4,0,Math.PI*2); ctx.fill();
+  });
+
+  // Extractor de aire (caja metálica)
+  ctx.fillStyle='#9aa4ac'; ctx.fillRect(340,0,120,18);
+  ctx.fillStyle='#7a8890'; ctx.fillRect(340,0,120,3);
+  ctx.fillStyle='#b0bcc4'; ctx.fillRect(342,4,116,10);
+  // rejilla
+  ctx.strokeStyle='#7a8890'; ctx.lineWidth=0.8;
+  for(let x=346;x<460;x+=8){ctx.beginPath();ctx.moveTo(x,4);ctx.lineTo(x,14);ctx.stroke();}
+
+  // === MESAS DE TRABAJO (acero inoxidable) ===
+  // Mesa larga central
+  ctx.fillStyle='#c8cfd4'; ctx.fillRect(30,270,740,22);
+  ctx.fillStyle='#e0e8ec'; ctx.fillRect(30,270,740,4); // reflejo superior
+  ctx.fillStyle='#a0aaaf'; ctx.fillRect(30,290,740,4); // sombra
+  ctx.strokeStyle='rgba(100,120,130,0.4)'; ctx.lineWidth=1;
+  ctx.strokeRect(30,270,740,22);
+  // patas de mesa
+  [[60,292],[200,292],[380,292],[560,292],[720,292]].forEach(([x,y])=>{
+    ctx.fillStyle='#a0aaaf'; ctx.fillRect(x,y,8,80);
+    ctx.fillStyle='#8a9298'; ctx.fillRect(x,y,8,2);
+  });
+  // bandeja reflejo en mesa
+  ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.fillRect(32,271,736,2);
+
+  // === CHORIZOS EN LA MESA ===
+  function drawChorizo(cx, cy, angle) {
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(angle);
+    // cuerpo
+    ctx.fillStyle='#8b3a2a';
+    roundRect(-22,-5,44,10,5); ctx.fill();
+    ctx.fillStyle='#a04535'; roundRect(-20,-4,40,5,4); ctx.fill();
+    // torceduras
+    ctx.strokeStyle='#6b2a1a'; ctx.lineWidth=1.5;
+    [-10,0,10].forEach(ox=>{ctx.beginPath();ctx.moveTo(ox,-5);ctx.lineTo(ox,5);ctx.stroke();});
+    // extremos atados
+    ctx.fillStyle='#d4a860';
+    ctx.fillRect(-24,-3,4,6); ctx.fillRect(20,-3,4,6);
+    ctx.restore();
+  }
+  const chorizoPositions=[
+    [100,263,0.15],[160,265,-0.1],[230,262,0.2],[310,264,-0.05],
+    [480,263,0.1],[550,265,-0.15],[630,262,0.18],[700,264,-0.08]
+  ];
+  chorizoPositions.forEach(([x,y,a])=>drawChorizo(x,y,a));
+
+  // === RIELES COLGANTES CON CHORIZOS ===
+  // Riel 1
+  ctx.fillStyle='#8a9298'; ctx.fillRect(50,25,180,5);
+  ctx.fillStyle='#6a7278'; ctx.fillRect(50,25,180,2);
+  // Chorizos colgantes riel 1
+  [[80,25],[120,25],[160,25],[200,25]].forEach(([x,y])=>{
+    ctx.strokeStyle='#8a9298'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x,y+5); ctx.lineTo(x,y+18); ctx.stroke();
+    drawChorizo(x, y+30, Math.PI/2);
+  });
+  // Riel 2
+  ctx.fillStyle='#8a9298'; ctx.fillRect(330,25,180,5);
+  ctx.fillStyle='#6a7278'; ctx.fillRect(330,25,180,2);
+  [[360,25],[400,25],[440,25],[480,25]].forEach(([x,y])=>{
+    ctx.strokeStyle='#8a9298'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x,y+5); ctx.lineTo(x,y+18); ctx.stroke();
+    drawChorizo(x, y+30, Math.PI/2);
+  });
+  // Riel 3
+  ctx.fillStyle='#8a9298'; ctx.fillRect(600,25,170,5);
+  ctx.fillStyle='#6a7278'; ctx.fillRect(600,25,170,2);
+  [[630,25],[670,25],[710,25],[750,25]].forEach(([x,y])=>{
+    ctx.strokeStyle='#8a9298'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x,y+5); ctx.lineTo(x,y+18); ctx.stroke();
+    drawChorizo(x, y+30, Math.PI/2);
+  });
+
+  // === ZONA INFERIOR (área de frío / almacén) ===
+  ctx.fillStyle='#b8c4ca'; ctx.fillRect(0,308,W,100);
+  ctx.fillStyle='rgba(150,170,180,0.3)'; ctx.fillRect(0,308,W,4);
+  // cajas/bandejas apiladas
+  function drawBandeja(x,y,w,h,col){
+    ctx.fillStyle=col; roundRect(x,y,w,h,3); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.8; roundRect(x,y,w,h,3); ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.fillRect(x+2,y+1,w-4,3);
+  }
+  [[30,320,90,22,'#e8e0d8'],[30,340,90,22,'#dfd8d0'],[30,360,90,22,'#d6d0c8'],
+   [140,320,70,22,'#c8d4d8'],[140,340,70,22,'#b8c8cc'],
+   [550,318,100,26,'#e4dcd0'],[550,342,100,26,'#dbd4c8'],
+   [665,320,90,22,'#e8e0d8'],[665,340,90,22,'#dfd8d0']
+  ].forEach(args=>drawBandeja(...args));
+
+  // Letrero de temperatura
+  ctx.fillStyle='#2c5270'; roundRect(250,318,120,30,4); ctx.fill();
+  ctx.fillStyle='#4af0b0'; ctx.font='bold 13px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('ZONA FRÍA 0-4°C', 310, 337);
+
+  // === MARCAS DE ESTACIONES DE INSPECCIÓN ===
+  // Círculos en el piso que indican dónde están los peligros
+  STATIONS.forEach(s => {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,200,50,0.55)';
+    ctx.lineWidth   = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(s.x, s.y + 32, 26, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  });
+
+  // === LÍNEA DE SUELO ===
+  ctx.fillStyle='#f0c040'; ctx.fillRect(0,405,W,3);
+  ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(0,407,W,2);
+
+  // === LETRERO DE SEGURIDAD lateral ===
+  ctx.fillStyle='#e74c3c'; roundRect(0,120,22,80,0); ctx.fill();
+  ctx.save(); ctx.translate(11,160); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle='#ffffff'; ctx.font='bold 9px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('HACCP',0,3);
+  ctx.restore();
+}
+
+// ==================== CARITA DE MARRANO ====================
+function drawPig(x, y, s) {
+  s = s || 1;
+  // cabeza
+  ctx.fillStyle='#f4a0b0';
+  ctx.beginPath(); ctx.arc(x,y,14*s,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#d4708a'; ctx.lineWidth=1; ctx.stroke();
+  // orejas
+  ctx.fillStyle='#f4a0b0';
+  ctx.beginPath(); ctx.ellipse(x-10*s,y-12*s,6*s,8*s,-0.4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+10*s,y-12*s,6*s,8*s,0.4,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#e87090';
+  ctx.beginPath(); ctx.ellipse(x-10*s,y-12*s,3.5*s,5*s,-0.4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+10*s,y-12*s,3.5*s,5*s,0.4,0,Math.PI*2); ctx.fill();
+  // hocico
+  ctx.fillStyle='#e8809a';
+  ctx.beginPath(); ctx.ellipse(x,y+4*s,7*s,5*s,0,0,Math.PI*2); ctx.fill();
+  // fosas nasales
+  ctx.fillStyle='#c05870';
+  ctx.beginPath(); ctx.ellipse(x-2.5*s,y+4*s,2*s,2.5*s,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x+2.5*s,y+4*s,2*s,2.5*s,0,0,Math.PI*2); ctx.fill();
+  // ojos
+  ctx.fillStyle='#1a0a0a';
+  ctx.beginPath(); ctx.arc(x-5*s,y-3*s,2.5*s,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+5*s,y-3*s,2.5*s,0,Math.PI*2); ctx.fill();
+  // brillo ojo
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(x-4*s,y-4*s,1*s,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x+6*s,y-4*s,1*s,0,Math.PI*2); ctx.fill();
+}
+
+// ==================== JUGADOR ====================
+function drawPlayer(flip) {
+  ctx.save();
+  if(flip<0){ ctx.translate(player.x*2,0); ctx.scale(-1,1); }
+  const px = flip<0 ? W-player.x : player.x;
+  const py = player.y;
+  const s  = 1.3;
+
+  // cofia
+  ctx.fillStyle='#f0f0f0'; roundRect(px-11*s,py-34*s,22*s,9*s,3); ctx.fill();
+  ctx.fillStyle='#ffffff'; roundRect(px-13*s,py-26*s,26*s,5*s,2); ctx.fill();
+  // cara
+  ctx.fillStyle='#f4a460'; roundRect(px-9*s,py-22*s,18*s,16*s,4); ctx.fill();
+  // ojos
+  ctx.fillStyle='#1a1a1a';
+  ctx.fillRect(px-6*s,py-18*s,3*s,3*s);
+  ctx.fillRect(px+2*s,py-18*s,3*s,3*s);
+  // overol
+  ctx.fillStyle='#d6eaf8'; roundRect(px-11*s,py-7*s,22*s,22*s,3); ctx.fill();
+  ctx.fillStyle='#aed6f1'; ctx.fillRect(px-14*s,py-7*s,5*s,15*s); ctx.fillRect(px+9*s,py-7*s,5*s,15*s);
+  // guantes
+  ctx.fillStyle='#5dade2'; ctx.fillRect(px-14*s,py+6*s,6*s,5*s); ctx.fillRect(px+9*s,py+6*s,6*s,5*s);
+  // piernas
+  ctx.fillStyle='#aed6f1'; ctx.fillRect(px-10*s,py+14*s,8*s,13*s); ctx.fillRect(px+2*s,py+14*s,8*s,13*s);
+  // botas
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(px-11*s,py+25*s,10*s,5*s); ctx.fillRect(px+1*s,py+25*s,10*s,5*s);
+  // portapapeles
+  ctx.fillStyle='#f5deb3'; ctx.fillRect(px+9*s,py-7*s,7*s,9*s);
+  ctx.fillStyle='#8b4513'; ctx.fillRect(px+10*s,py-6*s,5*s,7*s);
+  ctx.restore();
+}
+
+// ==================== ICONOS PELIGRO ====================
+// revealed=true  → muestra color e ícono real del tipo
+// revealed=false → ícono neutro con "?" (misterio)
+function drawHazardIcon(h, x, y, alpha, revealed) {
+  const R = 22;
+  const bgColor   = revealed ? h.color  : '#3d5a4a';  // neutro verde oscuro
+  const darkColor = revealed ? h.dark   : '#243830';
+  ctx.save(); ctx.globalAlpha = alpha;
+
+  // sombra
+  ctx.fillStyle='rgba(0,0,0,0.3)';
+  roundRect(x-R+3,y-R+3,R*2,R*2,8); ctx.fill();
+  // fondo
+  ctx.fillStyle=bgColor; roundRect(x-R,y-R,R*2,R*2,8); ctx.fill();
+  // brillo
+  ctx.fillStyle='rgba(255,255,255,0.13)'; roundRect(x-R+2,y-R+2,R*2-4,10,6); ctx.fill();
+  // borde
+  ctx.strokeStyle= revealed ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.18)';
+  ctx.lineWidth=1.5; roundRect(x-R,y-R,R*2,R*2,8); ctx.stroke();
+
+  if(!revealed) {
+    // Signo de interrogación
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.font='bold 22px Impact,sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('?', x, y+1);
+    ctx.textBaseline='alphabetic';
+  } else {
+    // Ícono real del tipo de peligro
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    if(h.type==='biologico') {
+      ctx.beginPath(); ctx.arc(x,y,6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle=bgColor; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.95)';
+      for(let a=0;a<6;a++){const r=a/6*Math.PI*2; ctx.beginPath();ctx.arc(x+Math.cos(r)*11,y+Math.sin(r)*11,2.5,0,Math.PI*2);ctx.fill();}
+    } else if(h.type==='fisico') {
+      ctx.beginPath(); ctx.moveTo(x,y-13); ctx.lineTo(x+13,y+10); ctx.lineTo(x-13,y+10); ctx.closePath(); ctx.fill();
+      ctx.fillStyle=darkColor; ctx.beginPath(); ctx.moveTo(x,y-8); ctx.lineTo(x+9,y+8); ctx.lineTo(x-9,y+8); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.fillRect(x-1,y-4,2,7); ctx.fillRect(x-1,y+5,2,2);
+    } else {
+      ctx.fillRect(x-5,y-12,10,5);
+      ctx.fillStyle=darkColor; ctx.fillRect(x-4,y-9,8,2);
+      ctx.fillStyle='rgba(255,255,255,0.95)'; roundRect(x-7,y-7,14,16,3); ctx.fill();
+      ctx.fillStyle=bgColor+'99'; roundRect(x-5,y-2,10,9,2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.beginPath();ctx.arc(x-2,y+1,1.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(x+3,y+4,1.5,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.globalAlpha=1; ctx.restore();
+}
+
+// ==================== DRAW GAME ====================
+function drawGame(ts) {
+  drawBG(ts);
+
+  // Banner título con fondo
+  ctx.fillStyle='rgba(44,82,112,0.88)';
+  roundRect(0,0,W,25,0); ctx.fill();
+  ctx.fillStyle='rgba(74,133,170,0.5)'; ctx.fillRect(0,23,W,2);
+
+  // Cerdito izquierdo
+  drawPig(22, 12, 0.72);
+  // Cerdito derecho
+  drawPig(W-22, 12, 0.72);
+
+  // Texto título
+  ctx.fillStyle='#ffffff'; ctx.font='bold 13px Impact,sans-serif'; ctx.textAlign='center';
+  shadow('rgba(0,0,0,0.8)',3);
+  ctx.fillText('ZONA DE INSPECCIÓN SANITARIA DE EL MARRANERO', W/2, 16);
+  clearShadow();
+
+  // Peligros — solo la estación activa se muestra completamente
+  hazards.forEach((h, i) => {
+    const isActive   = i === currentStation;
+    const isDone     = h.identified || h.failed;
+    const bob        = (isActive && !isDone) ? Math.sin(ts/700 + h.bobOffset) * 7 : 0;
+    h.visualY        = h.y + bob;
+    const revealed   = h.identified && !h.failed;
+
+    let alpha;
+    if(isDone)       alpha = 0.35;
+    else if(isActive) alpha = 1;
+    else              alpha = 0.22; // futuras: muy tenues
+
+    drawHazardIcon(h, h.x, h.visualY, alpha, revealed);
+
+    if(revealed) {
+      ctx.fillStyle='#2ecc71'; ctx.font='bold 14px Impact,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('✓', h.x, h.y + 38);
+    } else if(h.failed) {
+      ctx.fillStyle='#e74c3c'; ctx.font='bold 14px Impact,sans-serif'; ctx.textAlign='center';
+      ctx.fillText('✗', h.x, h.y + 38);
+    }
+
+    // Número de estación sobre las futuras (muy pequeño)
+    if(!isDone && !isActive) {
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='bold 10px Impact,sans-serif'; ctx.textAlign='center';
+      ctx.fillText(i + 1, h.x, h.y + 5);
+    }
+  });
+
+  // Flecha indicadora hacia la estación activa
+  if(currentStation < hazards.length) {
+    const target = hazards[currentStation];
+    if(!target.identified && !target.failed) {
+      // Pulso en la estación activa
+      const pulse = 0.6 + 0.4 * Math.abs(Math.sin(ts / 400));
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3;
+      roundRect(target.x - 30, target.y - 30, 60, 60, 10); ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // Jugador
+  drawPlayer(player.dir);
+
+  // Indicador ENTER/CLIC sobre la estación activa cuando el jugador llega
+  if(nearbyHazard && currentStation < hazards.length) {
+    const bx = nearbyHazard.x;
+    const by = nearbyHazard.y - 42;
+    ctx.fillStyle='rgba(241,196,15,0.97)';
+    roundRect(bx-50, by-15, 100, 22, 8); ctx.fill();
+    ctx.fillStyle='#1a1000'; ctx.font='bold 12px Impact,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('ENTER  o  CLIC', bx, by);
+    ctx.fillStyle='rgba(241,196,15,0.97)';
+    ctx.beginPath(); ctx.moveTo(bx-7,by+7); ctx.lineTo(bx+7,by+7); ctx.lineTo(bx,by+16); ctx.closePath(); ctx.fill();
+  }
+
+  // HUD inferior
+  drawHUD();
+}
+
+function drawHUD() {
+  // Franja HUD
+  ctx.fillStyle='rgba(0,0,0,0.84)'; ctx.fillRect(0,408,W,92);
+  ctx.strokeStyle='rgba(46,204,113,0.3)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,408); ctx.lineTo(W,408); ctx.stroke();
+
+  // Puntos
+  ctx.fillStyle='#f1c40f'; ctx.font='bold 26px Impact,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('Pts: '+score, 16, 440);
+
+  // Timer
+  const tcol = timeLeft<20?'#e74c3c':timeLeft<40?'#f39c12':'#2ecc71';
+  ctx.fillStyle=tcol; ctx.font='bold 26px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('Tiempo: '+timeLeft+'s', 400, 440);
+
+  // Progreso
+  ctx.fillStyle='#7f8c8d'; ctx.font='13px Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText(identified.length+' / 12 peligros identificados', 400, 462);
+
+  // Instrucción
+  ctx.fillStyle= nearbyHazard ? '#f1c40f' : '#2a7a5a';
+  ctx.font = nearbyHazard ? 'bold 12px Impact,sans-serif' : '11px Arial,sans-serif';
+  ctx.textAlign='center';
+  const stLabel = currentStation < hazards.length
+    ? 'Estación ' + (currentStation+1) + ' de 12'
+    : 'Recorrido completo';
+  ctx.fillText(nearbyHazard
+    ? '[ ESPACIO ] o [ ENTER ] para inspeccionar  |  o haz CLIC en el ícono  |  ' + stLabel
+    : 'El inspector se dirige a la siguiente estación…  |  ' + stLabel,
+    400, 480);
+
+  // Leyenda categorías
+  const leg=[{l:'Biológico',c:'#27ae60',x:640},{l:'Físico',c:'#e67e22',x:710},{l:'Químico',c:'#8e44ad',x:770}];
+  leg.forEach(g=>{ctx.fillStyle=g.c;ctx.font='bold 11px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(g.l,g.x,440);});
+}
+
+// ==================== SPLASH ====================
+function drawSplash(ts) {
+  // Fondo oscuro con patrón
+  ctx.fillStyle='#080c10'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Logo / nombre empresa
+  const t = (Date.now() - splashStart) / 1000;
+  const fadeIn = Math.min(1, t / 1.2);
+  ctx.save(); ctx.globalAlpha = fadeIn;
+
+  // Cerditos grandes centrados
+  drawPig(W/2 - 80, 155, 2.8);
+  drawPig(W/2 + 80, 155, 2.8);
+
+  // Nombre
+  ctx.fillStyle='#ffffff'; ctx.font='bold 52px Impact,sans-serif'; ctx.textAlign='center';
+  shadow('rgba(231,76,60,0.8)', 12);
+  ctx.fillText('EL MARRANERO', W/2, 260);
+  clearShadow();
+
+  ctx.fillStyle='#f8c8a0'; ctx.font='italic 18px Arial,sans-serif';
+  ctx.fillText('Planta de Procesamiento de Chorizos', W/2, 292);
+
+  // Línea decorativa
+  ctx.strokeStyle='#c0392b'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(W/2-180,310); ctx.lineTo(W/2+180,310); ctx.stroke();
+
+  ctx.fillStyle='#3a6a5a'; ctx.font='bold 13px Arial,sans-serif';
+  ctx.fillText('HERRAMIENTAS INTERACTIVAS DE INOCUIDAD ALIMENTARIA', W/2, 335);
+
+  // Indicador cargando
+  const dots = '.'.repeat((Math.floor(t * 2) % 4));
+  const barW  = 200;
+  const prog  = Math.min(1, t / 3.5);
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  roundRect(W/2 - barW/2, 370, barW, 8, 4); ctx.fill();
+  ctx.fillStyle='#c0392b';
+  roundRect(W/2 - barW/2, 370, barW * prog, 8, 4); ctx.fill();
+  ctx.fillStyle='#7f8c8d'; ctx.font='12px Arial,sans-serif';
+  ctx.fillText('Cargando' + dots, W/2, 398);
+
+  // Clic para saltar
+  if(t > 1.5) {
+    ctx.fillStyle='rgba(255,255,255,'+(0.4+0.3*Math.sin(t*3))+')';
+    ctx.font='13px Arial,sans-serif';
+    ctx.fillText('Haz clic o pulsa cualquier tecla para continuar', W/2, 430);
+  }
+  ctx.restore();
+}
+
+// ==================== MENÚ DE JUEGOS ====================
+function drawGameSelect(ts) {
+  // Fondo
+  ctx.fillStyle='#080c10'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=60){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+
+  // Cabecera
+  ctx.fillStyle='rgba(192,57,43,0.15)'; ctx.fillRect(0,0,W,90);
+  ctx.strokeStyle='#c0392b'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,90); ctx.lineTo(W,90); ctx.stroke();
+
+  drawPig(52, 45, 1.3);
+  drawPig(W-52, 45, 1.3);
+
+  ctx.fillStyle='#ffffff'; ctx.font='bold 30px Impact,sans-serif'; ctx.textAlign='center';
+  shadow('#c0392b', 6); ctx.fillText('EL MARRANERO', W/2, 38); clearShadow();
+  ctx.fillStyle='#f8c8a0'; ctx.font='13px Arial,sans-serif';
+  ctx.fillText('Herramientas Interactivas de Inocuidad Alimentaria', W/2, 62);
+  ctx.fillStyle='#3a6a5a'; ctx.font='bold 11px Arial,sans-serif';
+  ctx.fillText('Selecciona un módulo de aprendizaje', W/2, 80);
+
+  // ---- TARJETA JUEGO 1 ----
+  const c1x=160, c1y=108, c1w=480, c1h=108;
+  const hov1 = hoverBtn(c1x,c1y,c1w,c1h);
+  roundRect(c1x,c1y,c1w,c1h,12);
+  ctx.fillStyle=hov1?'rgba(39,174,96,0.18)':'rgba(39,174,96,0.08)'; ctx.fill();
+  ctx.strokeStyle=hov1?'#2ecc71':'#27ae60'; ctx.lineWidth=hov1?2:1.5;
+  roundRect(c1x,c1y,c1w,c1h,12); ctx.stroke();
+  roundRect(c1x+c1w-108,c1y+10,96,22,6); ctx.fillStyle='#27ae60'; ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('✓ DISPONIBLE',c1x+c1w-60,c1y+24);
+  ctx.fillStyle='#27ae60'; roundRect(c1x+16,c1y+16,46,46,10); ctx.fill();
+  ctx.font='22px sans-serif'; ctx.fillText('🔍',c1x+39,c1y+47);
+  ctx.fillStyle='#fff'; ctx.font='bold 16px Impact,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('Módulo 1 — Inspector Sanitario 2D',c1x+78,c1y+34);
+  ctx.fillStyle='#95a5a6'; ctx.font='12px Arial,sans-serif';
+  ctx.fillText('Identifica y clasifica los 3 tipos de peligros (biológico, físico, químico)',c1x+78,c1y+54);
+  ctx.fillStyle='#3a8a6a'; ctx.font='bold 11px Arial,sans-serif';
+  ctx.fillText('12 peligros  ·  90 s  ·  3 categorías',c1x+78,c1y+72);
+  roundRect(c1x+c1w-114,c1y+c1h-34,102,26,8);
+  ctx.fillStyle=hov1?'#27ae60':'#1a6b3c'; ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 13px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('▶  JUGAR',c1x+c1w-63,c1y+c1h-17);
+
+  // ---- TARJETA JUEGO 2 ----
+  const c2x=160, c2y=228, c2w=480, c2h=108;
+  const hov2 = hoverBtn(c2x,c2y,c2w,c2h);
+  roundRect(c2x,c2y,c2w,c2h,12);
+  ctx.fillStyle=hov2?'rgba(26,188,156,0.18)':'rgba(26,188,156,0.08)'; ctx.fill();
+  ctx.strokeStyle=hov2?'#1abc9c':'#148f77'; ctx.lineWidth=hov2?2:1.5;
+  roundRect(c2x,c2y,c2w,c2h,12); ctx.stroke();
+  roundRect(c2x+c2w-108,c2y+10,96,22,6); ctx.fillStyle='#148f77'; ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 11px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('✓ DISPONIBLE',c2x+c2w-60,c2y+24);
+  ctx.fillStyle='#148f77'; roundRect(c2x+16,c2y+16,46,46,10); ctx.fill();
+  ctx.font='22px sans-serif'; ctx.fillText('🌭',c2x+39,c2y+47);
+  ctx.fillStyle='#fff'; ctx.font='bold 16px Impact,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('Módulo 2 — Ruta del Chorizo: Buenas Prácticas',c2x+78,c2y+34);
+  ctx.fillStyle='#95a5a6'; ctx.font='12px Arial,sans-serif';
+  ctx.fillText('Recorre las 12 etapas del proceso y aplica las BPM para evitar ETAs',c2x+78,c2y+54);
+  ctx.fillStyle='#2a7a6a'; ctx.font='bold 11px Arial,sans-serif';
+  ctx.fillText('12 etapas  ·  120 s  ·  Flujo completo',c2x+78,c2y+72);
+  roundRect(c2x+c2w-114,c2y+c2h-34,102,26,8);
+  ctx.fillStyle=hov2?'#1abc9c':'#0e6655'; ctx.fill();
+  ctx.fillStyle='#fff'; ctx.font='bold 13px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('▶  JUGAR',c2x+c2w-63,c2y+c2h-17);
+
+  // ---- PRÓXIMAMENTE ----
+  const m3x=160,m3y=348,m3w=480,m3h=64;
+  roundRect(m3x,m3y,m3w,m3h,12);
+  ctx.fillStyle='rgba(255,255,255,0.02)'; ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.08)'; ctx.lineWidth=1;
+  roundRect(m3x,m3y,m3w,m3h,12); ctx.stroke();
+  roundRect(m3x+m3w-118,m3y+10,106,22,6);
+  ctx.fillStyle='rgba(127,140,141,0.4)'; ctx.fill();
+  ctx.fillStyle='#7f8c8d'; ctx.font='bold 11px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('🔒 PRÓXIMAMENTE',m3x+m3w-65,m3y+24);
+  ctx.fillStyle='rgba(255,255,255,0.06)'; roundRect(m3x+16,m3y+10,42,42,8); ctx.fill();
+  ctx.font='18px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.2)'; ctx.textAlign='center';
+  ctx.fillText('🌡️',m3x+37,m3y+37);
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='bold 14px Impact,sans-serif'; ctx.textAlign='left';
+  ctx.fillText('Módulo 3',m3x+70,m3y+28);
+  ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.font='12px Arial,sans-serif';
+  ctx.fillText('Próximamente — Control de Temperatura y Cadena de Frío',m3x+70,m3y+48);
+
+  // Pie
+  ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.font='11px Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('EL MARRANERO  ·  Inocuidad Alimentaria  ·  v1.0', W/2, 478);
+}
+
+// ==================== MENÚ (juego 1) ====================
+function drawMenu() {
+  // Fondo
+  ctx.fillStyle='#0f2318'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,W,H);
+
+  // Título
+  ctx.textAlign='center';
+  ctx.fillStyle='#e74c3c'; ctx.font='bold 48px Impact,sans-serif';
+  shadow('#5c0a0a',6); ctx.fillText('INSPECTOR SANITARIO',400,75); clearShadow();
+  // Cerditos en el menú
+  drawPig(105, 75, 1.1);
+  drawPig(695, 75, 1.1);
+  ctx.fillStyle='#f8c8a0'; ctx.font='italic 14px Arial,sans-serif';
+  ctx.fillText('Planta de Procesamiento de Chorizos – EL MARRANERO',400,106);
+
+  // Panel instrucciones
+  roundRect(120,135,560,195,12);
+  ctx.fillStyle='rgba(5,15,10,0.94)'; ctx.fill();
+  ctx.strokeStyle='rgba(39,174,96,0.5)'; ctx.lineWidth=1.5; ctx.stroke();
+
+  ctx.fillStyle='#2ecc71'; ctx.font='bold 20px Impact,sans-serif';
+  ctx.fillText('¿ CÓMO JUGAR ?',400,162);
+
+  const lines=[
+    'Mueve al inspector con las FLECHAS o WASD',
+    'Al acercarte a un ícono aparecerá un peligro para clasificar',
+    'Elige si es: Biológico · Físico · Químico   (o pulsa 1 · 2 · 3)',
+    'Acierto = +100 puntos          Error = -10 segundos',
+    'Identifica los 12 peligros antes de que el tiempo se acabe'
+  ];
+  ctx.fillStyle='#ddeedd'; ctx.font='14px Arial,sans-serif'; ctx.textAlign='left';
+  lines.forEach((l,i)=>{ ctx.fillText('▸  '+l, 148, 192+i*29); });
+
+  // Badges categorías
+  const cats=[
+    {l:'🦠 Biológico',c:'#27ae60',x:204},
+    {l:'⚠️  Físico',  c:'#e67e22',x:400},
+    {l:'⚗️  Químico', c:'#8e44ad',x:596}
+  ];
+  cats.forEach(c=>{
+    ctx.strokeStyle=c.c; ctx.lineWidth=1.5;
+    roundRect(c.x-80,350,160,32,8); ctx.fillStyle=c.c+'33'; ctx.fill(); ctx.stroke();
+    ctx.fillStyle=c.c; ctx.font='bold 15px Impact,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(c.l,c.x,371);
+  });
+
+  // Botón INICIAR
+  const hovI = hoverBtn(300,400,200,50);
+  roundRect(300,400,200,50,12);
+  ctx.fillStyle= hovI ? '#e74c3c' : '#b03020'; ctx.fill();
+  ctx.strokeStyle='#dd6644'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#ffffff'; ctx.font='bold 24px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('▶  INICIAR',400,432);
+
+  // Botón volver
+  const hovV = hoverBtn(10,460,120,28);
+  ctx.fillStyle= hovV ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)';
+  roundRect(10,460,120,28,6); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1; roundRect(10,460,120,28,6); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('← Menú de juegos', 70, 479);
+
+  ctx.fillStyle='#2a5a3a'; ctx.font='11px Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('También puedes pulsar ENTER o ESPACIO',400,468);
+}
+
+// ==================== PREGUNTA ====================
+function drawQuestion() {
+  // Dialog rendered as HTML overlay — just dim the canvas background
+  ctx.fillStyle='rgba(0,0,0,0.60)'; ctx.fillRect(0,0,W,H);
+}
+
+// ==================== RESULTADO ====================
+function drawResult() {
+  ctx.fillStyle='#0f2318'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.fillStyle='rgba(0,0,0,0.86)'; ctx.fillRect(0,0,W,H);
+
+  const pct = Math.round(identified.length/12*100);
+  const failed = hazards.filter(h=>h.failed).length;
+  const pass = pct >= 60;
+
+  // Título
+  ctx.fillStyle=pass?'#2ecc71':'#e74c3c'; ctx.font='bold 38px Impact,sans-serif'; ctx.textAlign='center';
+  shadow('#000',5); ctx.fillText(pass?'INSPECCIÓN APROBADA':'INSPECCIÓN FALLIDA',400,42); clearShadow();
+
+  // Métricas
+  const mets=[
+    {l:'PUNTUACIÓN', v:score+' pts',          c:'#f1c40f', x:145},
+    {l:'CORRECTOS',  v:identified.length+'/12',c:'#2ecc71', x:400},
+    {l:'FALLADOS',   v:failed+'/12',           c:failed>0?'#e74c3c':'#2ecc71', x:655}
+  ];
+  mets.forEach(m=>{
+    roundRect(m.x-105,60,210,62,10);
+    ctx.fillStyle='rgba(4,14,8,0.96)'; ctx.fill();
+    ctx.strokeStyle=m.c+'bb'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#7f8c8d'; ctx.font='11px Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(m.l,m.x,78);
+    ctx.fillStyle=m.c; ctx.font='bold 30px Impact,sans-serif';
+    ctx.fillText(m.v,m.x,105);
+  });
+
+  // Resumen peligros
+  ctx.fillStyle='#ecf0f1'; ctx.font='bold 15px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('RESUMEN DE PELIGROS POR CATEGORÍA',400,146);
+
+  const cols=[{key:'biologico',cx:140},{key:'fisico',cx:400},{key:'quimico',cx:660}];
+  cols.forEach(c=>{
+    const cat=CATS[c.key], cw=218, sy=160;
+    roundRect(c.cx-cw/2,sy,cw,28,6);
+    ctx.fillStyle=cat.color+'44'; ctx.fill();
+    ctx.strokeStyle=cat.color; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle=cat.color; ctx.font='bold 14px Impact,sans-serif'; ctx.textAlign='center';
+    ctx.fillText(cat.label, c.cx, sy+19);
+
+    cat.items.forEach((item,ii)=>{
+      const iy=sy+33+ii*28;
+      const wasId=identified.some(h=>h.id===item.id);
+      const wasFailed=hazards.some(h=>h.id===item.id && h.failed);
+      roundRect(c.cx-cw/2,iy,cw,24,4);
+      ctx.fillStyle= wasId?'rgba(10,58,24,0.88)':wasFailed?'rgba(58,10,10,0.88)':'rgba(7,7,7,0.85)';
+      ctx.fill();
+      ctx.fillStyle= wasId?'#2ecc71':wasFailed?'#e74c3c':'#7f8c8d';
+      ctx.font='12px Arial,sans-serif'; ctx.textAlign='left';
+      ctx.fillText(item.name, c.cx-cw/2+7, iy+15);
+      if(wasId){   ctx.fillStyle='#2ecc71';ctx.font='bold 13px Impact,sans-serif';ctx.textAlign='right';ctx.fillText('✓',c.cx+cw/2-5,iy+15);}
+      if(wasFailed){ctx.fillStyle='#e74c3c';ctx.font='bold 13px Impact,sans-serif';ctx.textAlign='right';ctx.fillText('✗',c.cx+cw/2-5,iy+15);}
+    });
+  });
+
+  // Mensaje
+  ctx.fillStyle='#95a5a6'; ctx.font='12px Arial,sans-serif'; ctx.textAlign='center';
+  const msg=pass
+    ?'¡Excelente! Conocer los peligros es el primer paso del control HACCP en inocuidad alimentaria.'
+    :'Recuerda: Biológico, Físico y Químico son los 3 tipos de peligros que debes controlar.';
+  wrapText(msg,400,464,720,17);
+
+  // Botones
+  const hJ=hoverBtn(160,435,200,42), hM=hoverBtn(440,435,200,42);
+  roundRect(160,435,200,42,10);
+  ctx.fillStyle='#27ae60'+(hJ?'cc':'44'); ctx.fill();
+  ctx.strokeStyle='#27ae60'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 17px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('▶  JUGAR DE NUEVO', 260, 461);
+
+  roundRect(440,435,200,42,10);
+  ctx.fillStyle='#2980b9'+(hM?'cc':'44'); ctx.fill();
+  ctx.strokeStyle='#2980b9'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.font='bold 17px Impact,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('☰  MENÚ DE JUEGOS', 540, 461);
+
+  ctx.fillStyle='#2a5a3a'; ctx.font='11px Arial,sans-serif'; ctx.textAlign='center';
+  ctx.fillText('ENTER o ESPACIO para jugar de nuevo', 400, 490);
+}
+
+// ----------------------------------------------------------------
+// HELPERS
+// ----------------------------------------------------------------
+function roundRect(x,y,w,h,r){
+  if(typeof r==='object'){
+    const {tl=0,tr=0,bl=0,br=0}=r;
+    ctx.beginPath();ctx.moveTo(x+tl,y);ctx.lineTo(x+w-tr,y);ctx.quadraticCurveTo(x+w,y,x+w,y+tr);
+    ctx.lineTo(x+w,y+h-br);ctx.quadraticCurveTo(x+w,y+h,x+w-br,y+h);
+    ctx.lineTo(x+bl,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-bl);
+    ctx.lineTo(x,y+tl);ctx.quadraticCurveTo(x,y,x+tl,y);ctx.closePath();
+  } else {
+    ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+  }
+}
+function shadow(col,blur){ctx.shadowColor=col;ctx.shadowBlur=blur;}
+function clearShadow(){ctx.shadowColor='transparent';ctx.shadowBlur=0;}
+function wrapText(text,x,y,maxW,lineH){
+  const words=text.split(' '); let line='';
+  words.forEach((w,i)=>{
+    const test=line+w+' ';
+    if(ctx.measureText(test).width>maxW&&i>0){ctx.fillText(line,x,y);line=w+' ';y+=lineH;}
+    else{line=test;}
+  });
+  ctx.fillText(line,x,y);
+}
+
+
+// Mouse tracking
+let mousePos={x:0,y:0};
+canvas.addEventListener('mousemove',e=>{
+  const c = toCanvasCoords(e.clientX, e.clientY);
+  mousePos.x = c.x;
+  mousePos.y = c.y;
+});
+function mouseInRect(x,y,w,h){return mousePos.x>=x&&mousePos.x<=x+w&&mousePos.y>=y&&mousePos.y<=y+h;}
+
+// Touch support — toCanvasCoords maneja el escalado CSS via getBoundingClientRect
+let _touchStartY = 0;
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  _touchStartY = t.clientY;
+  const {x:mx, y:my} = toCanvasCoords(t.clientX, t.clientY);
+  mousePos.x = mx; mousePos.y = my;
+  handleClick(mx, my);
+}, {passive:false});
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const t = e.touches[0];
+  const {x,y} = toCanvasCoords(t.clientX, t.clientY);
+  mousePos.x = x; mousePos.y = y;
+  // Simular teclas de movimiento Y con swipe vertical
+  const dy = t.clientY - _touchStartY;
+  keys['ArrowUp']   = dy < -10;
+  keys['ArrowDown'] = dy > 10;
+}, {passive:false});
+
+canvas.addEventListener('touchend', e => {
+  keys['ArrowUp'] = false;
+  keys['ArrowDown'] = false;
+}, {passive:false});
+function hoverBtn(x,y,w,h){return mouseInRect(x,y,w,h);}
+
+// ----------------------------------------------------------------
+// AJUSTE DE CANVAS AL VIEWPORT (mantiene relación 8:5)
+// ----------------------------------------------------------------
+function fitCanvas() {
+  const scale = Math.min(window.innerWidth / W, window.innerHeight / H);
+  canvas.style.width  = Math.floor(W * scale) + 'px';
+  canvas.style.height = Math.floor(H * scale) + 'px';
+}
+fitCanvas();
+window.addEventListener('resize', fitCanvas);
+screen.orientation && screen.orientation.addEventListener('change', fitCanvas);
+
+// ----------------------------------------------------------------
+// ARRANCAR
+// ----------------------------------------------------------------
+function launchGame(){
+  document.getElementById('game-intro').classList.add('hide');
+  startGame();
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
